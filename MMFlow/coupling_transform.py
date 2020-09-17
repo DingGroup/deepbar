@@ -1,5 +1,8 @@
+import math
 import torch
 import torch.nn as nn
+from rational_quadratic_spline import *
+from resnet import *
 
 class MixedRationalQuadraticCouplingTransform(nn.Module):
     def __init__(self,
@@ -54,7 +57,6 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
         conditioner_net_output_size = \
             len(self.transform_circular_feature_index)*(self.num_bins_circular*3) + \
             len(self.transform_regular_feature_index)*(self.num_bins_regular*3 + 1)
-
         
         self.conditioner_net = conditioner_net_create_fn(
             conditioner_net_input_size,
@@ -62,69 +64,97 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
             conditioner_net_output_size
         )
         
-    def forward(self, inputs, context):
+    def forward(self, inputs, context, inverse = False):
+        ## split inputs into four categories
         identity_circular_inputs = torch.index_select(inputs, -1, self.identity_circular_feature_index)
         identity_regular_inputs = torch.index_select(inputs, -1, self.identity_regular_feature_index)
 
-        identity_circular_inputs_expand = torch.cat([torch.cos(identity_circular_inputs),
-                                                      torch.sin(identity_circular_inputs)],
-                                                     dim = -1)
-        
-        conditioner_net_inputs = torch.cat([identity_circular_inputs_expand,
-                                           identity_regular_inputs],
-                                          dim = -1)
-        conditioner_net_outputs = self.conditioner_net(conditioner_nn_inputs, context)
-
-        conditioner_circular = conditioner_net_outputs[..., 0:len(self.transform_circular_feature_index)*(self.num_bins_circular*3)]
-        conditioner_regular = conditioner_net_output[..., len(self.transform_circular_feature_index)*(self.num_bins_circular*3):]
-
-        ## transform regular feature
-        unnormalized_widths = conditioner_regular[..., 0:self.num_bins_regular]
-        unnormalized_heights = conditioner_regular[..., self.num_bins_regular:2*self.num_bins_regular]
-        unnormalized_derivatives = conditioner_regular[..., 2*self.num_bins_regular :]
-
-        unnormalized_widths /= np.sqrt(self.conditioner_net.hidden_features)
-        unnormalized_heights /= np.sqrt(self.conditioner_net.hidden_features)
-        
-        
-        if self.tails is None:
-            spline_fn = splines.rational_quadratic_spline
-            spline_kwargs = {}
-        else:
-            spline_fn = splines.unconstrained_rational_quadratic_spline
-            spline_kwargs = {"tails": self.tails, "tail_bound": self.tail_bound}
-
-        return spline_fn(
-            inputs=inputs,
-            unnormalized_widths=unnormalized_widths,
-            unnormalized_heights=unnormalized_heights,
-            unnormalized_derivatives=unnormalized_derivatives,
-            inverse=inverse,
-            min_bin_width=self.min_bin_width,
-            min_bin_height=self.min_bin_height,
-            min_derivative=self.min_derivative,
-            **spline_kwargs
-        )
-        
-        
-        ## split output from conditioner_net_outputs and apply rational quatratic spline transform
         transform_circular_inputs = torch.index_select(inputs, -1, self.transform_circular_feature_index)
         transform_regular_inputs = torch.index_select(inputs, -1, self.transform_regular_feature_index)
         
+        ## expand identity circular inputs and combine it with identity regular inputs
+        ## to get the inputs for the conditioner network
+        identity_circular_inputs_expand = torch.cat([torch.cos(identity_circular_inputs),
+                                                     torch.sin(identity_circular_inputs)],
+                                                     dim = -1)
+        conditioner_net_inputs = torch.cat([identity_circular_inputs_expand,
+                                           identity_regular_inputs],
+                                          dim = -1)
+
+        ## compute conditioner
+        conditioner_net_outputs = self.conditioner_net(conditioner_net_inputs, context)
+        conditioner_circular = conditioner_net_outputs[..., 0:len(self.transform_circular_feature_index)*(self.num_bins_circular*3)]
+        conditioner_circular = conditioner_circular.reshape(inputs.shape[0], len(self.transform_circular_feature_index), -1)
+        conditioner_regular = conditioner_net_outputs[..., len(self.transform_circular_feature_index)*(self.num_bins_circular*3):]
+        conditioner_regular = conditioner_regular.reshape(inputs.shape[0], len(self.transform_regular_feature_index), -1)
         
+        ## transform regular feature
+        unnormalized_widths = conditioner_regular[..., 0:self.num_bins_regular]
+        unnormalized_heights = conditioner_regular[..., self.num_bins_regular:2*self.num_bins_regular]
+        unnormalized_derivatives = conditioner_regular[..., 2*self.num_bins_regular:]
+
+        unnormalized_widths /= np.sqrt(self.conditioner_net.hidden_size)
+        unnormalized_heights /= np.sqrt(self.conditioner_net.hidden_size)
+
+        regular_outputs, regular_logabsdet = rational_quadratic_spline(
+            transform_regular_inputs,
+            unnormalized_widths = unnormalized_widths,
+            unnormalized_heights = unnormalized_heights,
+            unnormalized_derivatives = unnormalized_derivatives,
+            inverse = inverse,
+            left = 0.0, right = 1.0,
+            bottom = 0.0, top = 1.0)
+
+        ## transform circular feature
+        unnormalized_widths = conditioner_circular[..., 0:self.num_bins_circular]
+        unnormalized_heights = conditioner_circular[..., self.num_bins_circular:2*self.num_bins_circular]
+        unnormalized_derivatives = conditioner_circular[..., 2*self.num_bins_circular:]
+        unnormalized_derivatives = torch.cat([unnormalized_derivatives,
+                                              unnormalized_derivatives[..., 0][..., None]],
+                                             dim = -1)
+        
+        unnormalized_widths /= np.sqrt(self.conditioner_net.hidden_size)
+        unnormalized_heights /= np.sqrt(self.conditioner_net.hidden_size)
+
+        circular_outputs, circular_logabsdet = rational_quadratic_spline(
+            transform_circular_inputs,
+            unnormalized_widths = unnormalized_widths,
+            unnormalized_heights = unnormalized_heights,
+            unnormalized_derivatives = unnormalized_derivatives,
+            inverse = inverse,
+            left = -math.pi, right = math.pi,
+            bottom = -math.pi, top = math.pi)
+
+        ## collect outputs
+        outputs = torch.empty_like(inputs)
+        outputs[:, self.identity_regular_feature_index] = identity_regular_inputs
+        outputs[:, self.identity_circular_feature_index] = identity_circular_inputs
+        outputs[:, self.transform_regular_feature_index] = regular_outputs
+        outputs[:, self.transform_circular_feature_index] = circular_outputs
+
+        logabsdet = torch.cat([regular_logabsdet, circular_logabsdet], -1)
+        logabsdet = torch.sum(logabsdet, -1)
+        return outputs, logabsdet
+    
 if __name__ == "__main__":
     feature_size = 10
     context_size = 5
     circular_feature_flag = torch.LongTensor([i%3 for i in range(feature_size)])
     transform_feature_flag = torch.LongTensor([i%2 for i in range(feature_size)])
+
+    conditioner_net_create_fn = lambda input_feature_size, context_size, output_size: \
+        ResidualNet(input_feature_size, context_size, output_size,
+                    hidden_size = 8, num_blocks = 2)
+    
     transform = MixedRationalQuadraticCouplingTransform(
         feature_size, context_size,
-        circular_feature_flag, transform_feature_flag
+        circular_feature_flag, transform_feature_flag,
+        conditioner_net_create_fn
     )
 
     batch_size = 22
-    feature = torch.randn((batch_size, feature_size))
-    context = torch.randn((batch_size, context_size))
-    transform(feature, context)
-    
+    feature = torch.rand((batch_size, feature_size))
+    context = torch.rand((batch_size, context_size))
+    outputs, logabsdet = transform(feature, context)
+
     
