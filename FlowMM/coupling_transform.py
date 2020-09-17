@@ -53,11 +53,13 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
             len(self.identity_regular_feature_index)
         conditioner_net_output_size = \
             len(self.transform_circular_feature_index)*(self.num_bins_circular*3) + \
-            len(self.transform_regular_feature_index)*(self.num_bins_circular*3 + 1)
+            len(self.transform_regular_feature_index)*(self.num_bins_regular*3 + 1)
 
         
         self.conditioner_net = conditioner_net_create_fn(
-            conditioner_net_input_size, conditioner_net_output_size
+            conditioner_net_input_size,
+            context_size,
+            conditioner_net_output_size
         )
         
     def forward(self, inputs, context):
@@ -67,11 +69,43 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
         identity_circular_inputs_expand = torch.cat([torch.cos(identity_circular_inputs),
                                                       torch.sin(identity_circular_inputs)],
                                                      dim = -1)
+        
         conditioner_net_inputs = torch.cat([identity_circular_inputs_expand,
                                            identity_regular_inputs],
                                           dim = -1)
+        conditioner_net_outputs = self.conditioner_net(conditioner_nn_inputs, context)
 
-        conditioner_net_outputs = self.conditioner_net(conditioner_nn_inputs)
+        conditioner_circular = conditioner_net_outputs[..., 0:len(self.transform_circular_feature_index)*(self.num_bins_circular*3)]
+        conditioner_regular = conditioner_net_output[..., len(self.transform_circular_feature_index)*(self.num_bins_circular*3):]
+
+        ## transform regular feature
+        unnormalized_widths = conditioner_regular[..., 0:self.num_bins_regular]
+        unnormalized_heights = conditioner_regular[..., self.num_bins_regular:2*self.num_bins_regular]
+        unnormalized_derivatives = conditioner_regular[..., 2*self.num_bins_regular :]
+
+        unnormalized_widths /= np.sqrt(self.conditioner_net.hidden_features)
+        unnormalized_heights /= np.sqrt(self.conditioner_net.hidden_features)
+        
+        
+        if self.tails is None:
+            spline_fn = splines.rational_quadratic_spline
+            spline_kwargs = {}
+        else:
+            spline_fn = splines.unconstrained_rational_quadratic_spline
+            spline_kwargs = {"tails": self.tails, "tail_bound": self.tail_bound}
+
+        return spline_fn(
+            inputs=inputs,
+            unnormalized_widths=unnormalized_widths,
+            unnormalized_heights=unnormalized_heights,
+            unnormalized_derivatives=unnormalized_derivatives,
+            inverse=inverse,
+            min_bin_width=self.min_bin_width,
+            min_bin_height=self.min_bin_height,
+            min_derivative=self.min_derivative,
+            **spline_kwargs
+        )
+        
         
         ## split output from conditioner_net_outputs and apply rational quatratic spline transform
         transform_circular_inputs = torch.index_select(inputs, -1, self.transform_circular_feature_index)
