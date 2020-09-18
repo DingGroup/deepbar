@@ -2,5 +2,4 @@ source oldff/leaprc.ff99SB
 seq = sequence{ ACE ALA NME }
 saveAmberParm seq alanine_dipeptide.prmtop alanine_dipeptide.prmcrd
 savepdb seq alanine_dipeptide.pdb
-
 quit

@@ -1,8 +1,8 @@
 import math
 import torch
 import torch.nn as nn
-from rational_quadratic_spline import *
-from resnet import *
+from .rational_quadratic_spline import *
+from .resnet import *
 
 class MixedRationalQuadraticCouplingTransform(nn.Module):
     def __init__(self,
@@ -21,10 +21,9 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
         
         self.num_bins_circular = num_bins_circular
         self.num_bins_regular = num_bins_regular
-        
-        circular_feature_flag = torch.as_tensor(circular_feature_flag)
-        transform_feature_flag = torch.as_tensor(transform_feature_flag)
 
+        self.register_buffer('circular_feature_flag', torch.as_tensor(circular_feature_flag))
+        self.register_buffer('transform_feature_flag', torch.as_tensor(transform_feature_flag))
         feature_index = torch.arange(feature_size)
 
         self.register_buffer(

@@ -90,18 +90,12 @@ for index in range(M_PMF**2):
 n = energy_matrix.shape[1]//energy_matrix.shape[0]
 num_conf_all = np.array([n for i in range(M**2)])
 fastmbar = FastMBAR(energy = energy_matrix, num_conf = num_conf_all, cuda=True, verbose = True)
-
 prob = np.exp(-fastmbar.log_prob_mix)
-tmp = thetas/np.pi*180
-flag_0 = (tmp[:, 1] > 0) & (tmp[:, 1] <= 120)
-flag_1 = ~ flag_0
-
-dF = -np.log(np.sum(prob[flag_1])/np.sum(prob[flag_0]))
 
 with open("./output/umbrella_sampling/fastmbar_result.pkl", 'wb') as file_handle:
-    pickle.dump({'F': fastmbar.F, 'log_prob_mix': fastmbar.log_prob_mix,
-                 'prob': prob, 'flag_0': flag_0,
-                 'flag_1': flag_1, 'dF': dF}, file_handle)
+    pickle.dump({'F': fastmbar.F,
+                 'log_prob_mix': fastmbar.log_prob_mix,
+                 'prob': prob}, file_handle)
 
 PMF, _ = fastmbar.calculate_free_energies_of_perturbed_states(energy_PMF)
 with open("./output/umbrella_sampling/PMF.pkl", 'wb') as file_handle:
@@ -109,12 +103,6 @@ with open("./output/umbrella_sampling/PMF.pkl", 'wb') as file_handle:
 
 with open("./output/umbrella_sampling/PMF.pkl", 'rb') as file_handle:
     PMF = pickle.load(file_handle)
-
-# fig = plt.figure(0)
-# fig.clf()
-# plt.imshow(np.flipud(PMF.reshape((M_PMF, M_PMF))), extent = (-180, 180, -180, 180))
-# plt.colorbar()
-# plt.savefig("./output/umbrella_sampling/PMF_fast_mbar.pdf")
 
 PMF_expanded = np.zeros((M_PMF+1, M_PMF+1))
 PMF_expanded[0:M_PMF,0:M_PMF] = PMF.reshape((M_PMF, M_PMF))
@@ -133,7 +121,5 @@ plt.xlabel(r"$\phi$ (degree)")
 plt.ylabel(r"$\psi$ (degree)")
 plt.xlim(-180, 180)
 plt.ylim(-180, 180)
-plt.vlines(0, -180, 180, linestyles = 'dotted')
-plt.vlines(120, -180, 180, linestyles = 'dotted')
 plt.tight_layout()
 plt.savefig("./output/umbrella_sampling/PMF_contourf.eps")

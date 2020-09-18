@@ -1,6 +1,3 @@
-__author__ = "Xinqiang Ding <xqding@umich.edu>"
-__date__ = "2019/08/01 22:53:01"
-
 import torch
 import numpy as np
 import mdtraj
@@ -10,9 +7,9 @@ import simtk.openmm.app.topology as topology
 import simtk.openmm.app.element as element
 import math
 from collections import deque, OrderedDict, defaultdict, namedtuple
-import MDTorch.utils.functional as functional
+import MMFlow.utils.functional as functional
 
-class CoordinateTransformerWithOrientation():
+class CoordinateTransformer():
     """ A class used for transforming internal coordinates into 
     Cartesian coordinates of a molecule.
     """
@@ -243,18 +240,18 @@ class CoordinateTransformerWithOrientation():
         ## Cartesian coordinates of the three reference particles
         xyz[self.ref_particle_1] = particle_1_xyz
         xyz[self.ref_particle_2] = particle_1_xyz + \
-            particle_2_bond * torch.cat([-torch.sin(particle_2_polar_angle)*torch.cos(particle_2_azimuthal_angle),
-                                         -torch.sin(particle_2_polar_angle)*torch.sin(particle_2_azimuthal_angle),
+            particle_2_bond * torch.cat([torch.sin(particle_2_polar_angle)*torch.cos(particle_2_azimuthal_angle),
+                                         torch.sin(particle_2_polar_angle)*torch.sin(particle_2_azimuthal_angle),
                                          torch.cos(particle_2_polar_angle)], dim = -1)
 
-        log_jacobian = torch.log(torch.squeeze(particle_2_bond)**2*torch.sin(particle_2_polar_angle))
+        log_jacobian = torch.log(torch.squeeze(particle_2_bond)**2*torch.sin(torch.squeeze(particle_2_polar_angle)))
         
         xyz[self.ref_particle_3] = particle_1_xyz + \
-            particle_3_bond * torch.cat([-torch.sin(particle_3_polar_angle)*torch.cos(particle_3_azimuthal_angle),
-                                         -torch.sin(particle_3_polar_angle)*torch.sin(particle_3_azimuthal_angle),
+            particle_3_bond * torch.cat([torch.sin(particle_3_polar_angle)*torch.cos(particle_3_azimuthal_angle),
+                                         torch.sin(particle_3_polar_angle)*torch.sin(particle_3_azimuthal_angle),
                                          torch.cos(particle_3_polar_angle)], dim = -1)
 
-        log_jacobian += torch.log(torch.squeeze(particle_3_bond)**2*torch.sin(particle_3_polar_angle))
+        log_jacobian += torch.log(torch.squeeze(particle_3_bond)**2*torch.sin(torch.squeeze(particle_3_polar_angle)))
 
         ## Cartesian coordinates of other particles
         for idx in range(len(self.particle_visited_in_order)):
@@ -349,7 +346,7 @@ class CoordinateTransformerWithOrientation():
             torch.tensor([self.dihedral_particle_idx[p] for p in self.particle_visited_in_order])
         )
         
-        internal_coor = InternalCoordinateWithOrientation(
+        internal_coor = InternalCoordinate(
             reference_particle_1_xyz = ref_p_1_xyz,
             reference_particle_2_bond = ref_p_2_bond,
             reference_particle_2_polar_angle = ref_p_2_polar_angle,
@@ -369,7 +366,7 @@ class CoordinateTransformerWithOrientation():
 
         return internal_coor, log_absdet
 
-class InternalCoordinateWithOrientation():
+class InternalCoordinate():
     def __init__(self,
                  reference_particle_1_xyz = None,
                  reference_particle_2_bond = None,
