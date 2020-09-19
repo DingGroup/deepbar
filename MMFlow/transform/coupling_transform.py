@@ -92,8 +92,8 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
         unnormalized_heights = conditioner_regular[..., self.num_bins_regular:2*self.num_bins_regular]
         unnormalized_derivatives = conditioner_regular[..., 2*self.num_bins_regular:]
 
-        unnormalized_widths /= np.sqrt(self.conditioner_net.hidden_size)
-        unnormalized_heights /= np.sqrt(self.conditioner_net.hidden_size)
+        unnormalized_widths = unnormalized_widths / np.sqrt(self.conditioner_net.hidden_size)
+        unnormalized_heights = unnormalized_heights / np.sqrt(self.conditioner_net.hidden_size)
 
         regular_outputs, regular_logabsdet = rational_quadratic_spline(
             transform_regular_inputs,
@@ -112,8 +112,8 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
                                               unnormalized_derivatives[..., 0][..., None]],
                                              dim = -1)
         
-        unnormalized_widths /= np.sqrt(self.conditioner_net.hidden_size)
-        unnormalized_heights /= np.sqrt(self.conditioner_net.hidden_size)
+        unnormalized_widths = unnormalized_widths / np.sqrt(self.conditioner_net.hidden_size)
+        unnormalized_heights = unnormalized_heights / np.sqrt(self.conditioner_net.hidden_size)
 
         circular_outputs, circular_logabsdet = rational_quadratic_spline(
             transform_circular_inputs,

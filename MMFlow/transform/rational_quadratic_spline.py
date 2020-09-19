@@ -7,8 +7,8 @@ DEFAULT_MIN_BIN_HEIGHT = 1e-3
 DEFAULT_MIN_DERIVATIVE = 1e-3
 
 def searchsorted(bin_locations, inputs, eps=1e-6):
-    bin_locations[..., -1] += eps
-    bin_locations[..., 0] -= eps
+    bin_locations[..., -1] = bin_locations[..., -1] + eps
+    bin_locations[..., 0] = bin_locations[..., 0]- eps
     return torch.sum(inputs[..., None] >= bin_locations, dim=-1) - 1
 
 def rational_quadratic_spline(

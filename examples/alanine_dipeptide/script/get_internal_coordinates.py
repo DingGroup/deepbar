@@ -42,7 +42,11 @@ with torch.no_grad():
 
 with open("./output/umbrella_sampling/fastmbar_result.pkl", 'rb') as file_handle:
     fastmbar_result = pickle.load(file_handle)
-prob_md = fastmbar_result['log_prob_mix']
+log_prob_mix = fastmbar_result['log_prob_mix']
+log_prob = -log_prob_mix
+log_prob = log_prob - np.max(log_prob)
+prob = np.exp(log_prob)
+prob_md = prob / np.sum(prob)
 
 # xyz, xyz_logabsdet = coor_transformer.compute_xyz_from_internal(
 #     ic.reference_particle_1_xyz,
@@ -58,4 +62,6 @@ prob_md = fastmbar_result['log_prob_mix']
 file_name = "./output/internal_coor/internal_coor.pkl"
 with open(file_name, 'wb') as file_handle:
     pickle.dump({"ic": ic , 
-                 "prob": prob_md}, file_handle)
+                 "prob": prob_md,
+                 'coor_transformer': coor_transformer},
+                file_handle)

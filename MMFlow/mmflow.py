@@ -1,8 +1,8 @@
+import math
 import torch
 import torch.nn as nn
 import torch.distributions as distributions
-import MMFlow.MixedRationalQuadraticCouplingTransform \
-    as MixedRationalQuadraticCouplingTransform
+from MMFlow.transform.coupling_transform import MixedRationalQuadraticCouplingTransform
 
 class MMFlow(nn.Module):
     def __init__(self,
@@ -11,17 +11,17 @@ class MMFlow(nn.Module):
                  circular_feature_flag,
                  transform_feature_flag_list,
                  conditioner_net_create_fn,
-                 num_bins_circular
+                 num_bins_circular,
                  num_bins_regular):
         super(MMFlow, self).__init__()
 
         self.feature_size = feature_size
         self.context_size = context_size
 
-        self.register_buffer('circular_feature_flag', torch.tensor(circular_feature_flag))
+        self.register_buffer('circular_feature_flag', torch.as_tensor(circular_feature_flag))
         
-        transform_feature_flag = torch.tensor(
-            [torch.tensor(flag) for flag in transform_feature_flag_list]
+        transform_feature_flag = torch.stack(
+            [torch.as_tensor(flag) for flag in transform_feature_flag_list]
         )
         self.register_buffer('transform_feature_flag', transform_feature_flag)
         
@@ -42,8 +42,8 @@ class MMFlow(nn.Module):
                 base_dist_low.append(0.0)
                 base_dist_high.append(1.0)
                 
-        self.register_buffer('base_dist_low', base_dist_low)
-        self.register_buffer('base_dist_high', base_dist_high)
+        self.register_buffer('base_dist_low', torch.tensor(base_dist_low))
+        self.register_buffer('base_dist_high', torch.tensor(base_dist_high))
         
         ## make transforms
         self.transforms = nn.ModuleList([])
@@ -60,4 +60,21 @@ class MMFlow(nn.Module):
                 )
             )
         
+    def forward(self, feature, context = None):
+        z = feature
+        logabsdet_tot = 0
+        for transform in self.transforms:
+            z, logabsdet = transform(z, context, inverse = False)
+            logabsdet_tot = logabsdet_tot + logabsdet
+
+        return z, logabsdet
+
+    def compute_log_prob(self, feature, context = None):
+        z, logabsdet = self.forward(feature, context)
         
+        base_dist = distributions.Uniform(low = self.base_dist_low,
+                                          high = self.base_dist_high)
+        base_dist = distributions.Independent(base_dist, 1)
+        
+        log_prob = base_dist.log_prob(z) + logabsdet        
+        return log_prob
