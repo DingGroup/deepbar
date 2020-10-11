@@ -9,7 +9,7 @@ class MMFlow(nn.Module):
                  feature_size,
                  context_size,
                  circular_feature_flag,
-                 transform_feature_flag_list,
+                 transform_feature_flag,
                  conditioner_net_create_fn,
                  num_bins_circular,
                  num_bins_regular):
@@ -19,10 +19,6 @@ class MMFlow(nn.Module):
         self.context_size = context_size
 
         self.register_buffer('circular_feature_flag', torch.as_tensor(circular_feature_flag))
-        
-        transform_feature_flag = torch.stack(
-            [torch.as_tensor(flag) for flag in transform_feature_flag_list]
-        )
         self.register_buffer('transform_feature_flag', transform_feature_flag)
         
         self.conditioner_net_create_fn = conditioner_net_create_fn
@@ -63,12 +59,23 @@ class MMFlow(nn.Module):
     def forward(self, feature, context = None):
         z = feature
         logabsdet_tot = 0
+
         for transform in self.transforms:
             z, logabsdet = transform(z, context, inverse = False)
             logabsdet_tot = logabsdet_tot + logabsdet
+            
+        return z, logabsdet_tot
 
-        return z, logabsdet
+    def _inverse(self, z, context = None):
+        x = z
+        logabsdet_tot = 0
 
+        for transform in self.transforms[-1::-1]:
+            x, logabsdet = transform(x, context, inverse = True)
+            logabsdet_tot = logabsdet_tot + logabsdet
+                    
+        return x, logabsdet_tot
+            
     def compute_log_prob(self, feature, context = None):
         z, logabsdet = self.forward(feature, context)
         
@@ -78,3 +85,22 @@ class MMFlow(nn.Module):
         
         log_prob = base_dist.log_prob(z) + logabsdet        
         return log_prob
+
+    def sample_and_compute_log_prob(self, num_samples, context = None):
+        base_dist = distributions.Uniform(low = self.base_dist_low,
+                                          high = self.base_dist_high)
+        base_dist = distributions.Independent(base_dist, 1)
+        
+        if context is not None:
+            context = context.repeat(num_samples, 1)
+            
+        z = base_dist.sample((context.shape[0],))
+        log_prob = base_dist.log_prob(z)
+
+        x, logabsdet = self._inverse(z, context)
+        log_prob = log_prob - logabsdet
+        
+        if context is not None:
+            x = x.reshape(num_samples, -1, x.shape[-1])
+            log_prob = log_prob.reshape(num_samples, -1)
+        return x, log_prob

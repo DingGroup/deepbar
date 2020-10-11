@@ -1,8 +1,8 @@
 import math
 import torch
 import torch.nn as nn
-from .rational_quadratic_spline import *
-from .resnet import *
+from MMFlow.transform.rational_quadratic_spline import *
+from MMFlow.transform.resnet import *
 
 class MixedRationalQuadraticCouplingTransform(nn.Module):
     def __init__(self,
@@ -151,9 +151,10 @@ if __name__ == "__main__":
         conditioner_net_create_fn
     )
 
-    batch_size = 22
+    batch_size = 3
     feature = torch.rand((batch_size, feature_size))
     context = torch.rand((batch_size, context_size))
-    outputs, logabsdet = transform(feature, context)
-
     
+    with torch.no_grad():
+        outputs, logabsdet = transform(feature, context)
+        inputs, logabsdet_i = transform(outputs, context, inverse = True)

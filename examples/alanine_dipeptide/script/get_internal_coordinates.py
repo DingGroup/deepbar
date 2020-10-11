@@ -38,7 +38,7 @@ M = 25
 traj = mdtraj.load_dcd(
         "./output/umbrella_sampling/traj_all.dcd", top = topology, stride = 1)
 with torch.no_grad():
-    ic, ic_logabsdet = coor_transformer.compute_internal_from_xyz(torch.from_numpy(traj.xyz))
+    ic, ic_logabsdet = coor_transformer.compute_internal_coordinate_from_xyz(torch.from_numpy(traj.xyz))
 
 with open("./output/umbrella_sampling/fastmbar_result.pkl", 'rb') as file_handle:
     fastmbar_result = pickle.load(file_handle)
