@@ -100,7 +100,7 @@ if torch.cuda.is_available():
 mmflow = mmflow.to(device)
 
 optimizer = optim.Adam(mmflow.parameters(), lr=1e-3)
-num_epoch = 500
+num_epoch = 300
 scheduler = ReduceLROnPlateau(optimizer, 'min', factor = 0.5, patience = 5, threshold = 1e-3)
 
 loss_record = []

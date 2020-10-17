@@ -83,47 +83,55 @@ class MixedRationalQuadraticCouplingTransform(nn.Module):
         ## compute conditioner
         conditioner_net_outputs = self.conditioner_net(conditioner_net_inputs, context)
         conditioner_circular = conditioner_net_outputs[..., 0:len(self.transform_circular_feature_index)*(self.num_bins_circular*3)]
-        conditioner_circular = conditioner_circular.reshape(inputs.shape[0], len(self.transform_circular_feature_index), -1)
+        conditioner_circular = conditioner_circular.reshape(inputs.shape[0], len(self.transform_circular_feature_index), self.num_bins_circular*3)
         conditioner_regular = conditioner_net_outputs[..., len(self.transform_circular_feature_index)*(self.num_bins_circular*3):]
-        conditioner_regular = conditioner_regular.reshape(inputs.shape[0], len(self.transform_regular_feature_index), -1)
+        conditioner_regular = conditioner_regular.reshape(inputs.shape[0], len(self.transform_regular_feature_index), self.num_bins_regular*3+1)
         
         ## transform regular feature
-        unnormalized_widths = conditioner_regular[..., 0:self.num_bins_regular]
-        unnormalized_heights = conditioner_regular[..., self.num_bins_regular:2*self.num_bins_regular]
-        unnormalized_derivatives = conditioner_regular[..., 2*self.num_bins_regular:]
+        if conditioner_regular.nelement() > 0:
+            unnormalized_widths = conditioner_regular[..., 0:self.num_bins_regular]
+            unnormalized_heights = conditioner_regular[..., self.num_bins_regular:2*self.num_bins_regular]
+            unnormalized_derivatives = conditioner_regular[..., 2*self.num_bins_regular:]
 
-        unnormalized_widths = unnormalized_widths / np.sqrt(self.conditioner_net.hidden_size)
-        unnormalized_heights = unnormalized_heights / np.sqrt(self.conditioner_net.hidden_size)
+            unnormalized_widths = unnormalized_widths / np.sqrt(self.conditioner_net.hidden_size)
+            unnormalized_heights = unnormalized_heights / np.sqrt(self.conditioner_net.hidden_size)
 
-        regular_outputs, regular_logabsdet = rational_quadratic_spline(
-            transform_regular_inputs,
-            unnormalized_widths = unnormalized_widths,
-            unnormalized_heights = unnormalized_heights,
-            unnormalized_derivatives = unnormalized_derivatives,
-            inverse = inverse,
-            left = 0.0, right = 1.0,
-            bottom = 0.0, top = 1.0)
-
-        ## transform circular feature
-        unnormalized_widths = conditioner_circular[..., 0:self.num_bins_circular]
-        unnormalized_heights = conditioner_circular[..., self.num_bins_circular:2*self.num_bins_circular]
-        unnormalized_derivatives = conditioner_circular[..., 2*self.num_bins_circular:]
-        unnormalized_derivatives = torch.cat([unnormalized_derivatives,
-                                              unnormalized_derivatives[..., 0][..., None]],
-                                             dim = -1)
+            regular_outputs, regular_logabsdet = rational_quadratic_spline(
+                transform_regular_inputs,
+                unnormalized_widths = unnormalized_widths,
+                unnormalized_heights = unnormalized_heights,
+                unnormalized_derivatives = unnormalized_derivatives,
+                inverse = inverse,
+                left = 0.0, right = 1.0,
+                bottom = 0.0, top = 1.0)
+        else:
+            regular_outputs = conditioner_net_outputs.new_zeros(inputs.shape[0], len(self.transform_regular_feature_index))
+            regular_logabsdet = conditioner_net_outputs.new_zeros(inputs.shape[0], len(self.transform_regular_feature_index))
         
-        unnormalized_widths = unnormalized_widths / np.sqrt(self.conditioner_net.hidden_size)
-        unnormalized_heights = unnormalized_heights / np.sqrt(self.conditioner_net.hidden_size)
+        ## transform circular feature
+        if conditioner_circular.nelement() > 0:
+            unnormalized_widths = conditioner_circular[..., 0:self.num_bins_circular]
+            unnormalized_heights = conditioner_circular[..., self.num_bins_circular:2*self.num_bins_circular]
+            unnormalized_derivatives = conditioner_circular[..., 2*self.num_bins_circular:]
+            unnormalized_derivatives = torch.cat([unnormalized_derivatives,
+                                                  unnormalized_derivatives[..., 0][..., None]],
+                                                 dim = -1)
 
-        circular_outputs, circular_logabsdet = rational_quadratic_spline(
-            transform_circular_inputs,
-            unnormalized_widths = unnormalized_widths,
-            unnormalized_heights = unnormalized_heights,
-            unnormalized_derivatives = unnormalized_derivatives,
-            inverse = inverse,
-            left = -math.pi, right = math.pi,
-            bottom = -math.pi, top = math.pi)
+            unnormalized_widths = unnormalized_widths / np.sqrt(self.conditioner_net.hidden_size)
+            unnormalized_heights = unnormalized_heights / np.sqrt(self.conditioner_net.hidden_size)
 
+            circular_outputs, circular_logabsdet = rational_quadratic_spline(
+                transform_circular_inputs,
+                unnormalized_widths = unnormalized_widths,
+                unnormalized_heights = unnormalized_heights,
+                unnormalized_derivatives = unnormalized_derivatives,
+                inverse = inverse,
+                left = -math.pi, right = math.pi,
+                bottom = -math.pi, top = math.pi)
+        else:
+            circular_outputs = conditioner_net_outputs.new_zeros(inputs.shape[0], len(self.transform_circular_feature_index))
+            circular_logabsdet = conditioner_net_outputs.new_zeros(inputs.shape[0], len(self.transform_circular_feature_index))
+                    
         ## collect outputs
         outputs = torch.empty_like(inputs)
         outputs[:, self.identity_regular_feature_index] = identity_regular_inputs

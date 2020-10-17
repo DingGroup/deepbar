@@ -35,7 +35,7 @@ mol_id = "mobley_1017962"
 
 ## openmm context
 ## read system
-with open(f"./structure/{mol_id}.xml", 'r') as file_handle:
+with open(f"./structure/{mol_id}_{args.solvent}.xml", 'r') as file_handle:
     xml = file_handle.read()
 system = omm.XmlSerializer.deserialize(xml)
 
@@ -83,7 +83,7 @@ plt.hist(log_p_flow, bins = 30, range = [np.min(log_p_md) - 10, np.max(log_p_md)
 plt.legend()
 plt.savefig(f"./output/{args.solvent}/plots/log_p_dist_hidden_size_{hidden_size}_num_transforms_{num_transforms}.pdf")
 
-with open(f"./output/{args.solvent}/energy/log_p.pkl", 'wb') as file_handle:
+with open(f"./output/{args.solvent}/energy/log_p_hidden_size_{hidden_size}_num_transforms_{num_transforms}.pkl", 'wb') as file_handle:
     pickle.dump({'log_p_md': log_p_md, 'log_p_flow': log_p_flow}, file_handle)
     
 

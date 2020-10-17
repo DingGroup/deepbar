@@ -36,7 +36,7 @@ print(f"num_transforms: {num_transforms}, hidden_size: {hidden_size}")
 mol_id = "mobley_1017962"
 
 ## load mmflow model
-epoch = 499
+epoch = 269
 data = torch.load(f"./output/{args.solvent}/mmflow_models_hidden_size_{hidden_size}_num_transforms_{num_transforms}/mmflow_model_epoch_{epoch}.pt")
 
 conditioner_net_create_fn = lambda feature_size, context_size, output_size: \
