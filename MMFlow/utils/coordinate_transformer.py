@@ -245,14 +245,14 @@ class CoordinateTransformer():
                                          torch.sin(particle_2_polar_angle)*torch.sin(particle_2_azimuthal_angle),
                                          torch.cos(particle_2_polar_angle)], dim = -1)
 
-        log_jacobian = torch.log(torch.squeeze(particle_2_bond)**2*torch.sin(torch.squeeze(particle_2_polar_angle)))
+        log_jacobian = torch.log(torch.abs(torch.squeeze(particle_2_bond)**2*torch.sin(torch.squeeze(particle_2_polar_angle))))
         
         xyz[self.ref_particle_3] = particle_1_xyz + \
             particle_3_bond * torch.cat([torch.sin(particle_3_polar_angle)*torch.cos(particle_3_azimuthal_angle),
                                          torch.sin(particle_3_polar_angle)*torch.sin(particle_3_azimuthal_angle),
                                          torch.cos(particle_3_polar_angle)], dim = -1)
 
-        log_jacobian += torch.log(torch.squeeze(particle_3_bond)**2*torch.sin(torch.squeeze(particle_3_polar_angle)))
+        log_jacobian += torch.log(torch.abs(torch.squeeze(particle_3_bond)**2*torch.sin(torch.squeeze(particle_3_polar_angle))))
 
         ## Cartesian coordinates of other particles
         for idx in range(len(self.particle_visited_in_order)):
@@ -445,8 +445,8 @@ class CoordinateTransformer():
         )
         
         ## compute logabsdet of the transform
-        log_absdet = -torch.log(ref_p_2_bond**2*torch.sin(ref_p_2_polar_angle))
-        log_absdet += -torch.log(ref_p_3_bond**2*torch.sin(ref_p_3_polar_angle))
+        log_absdet = -torch.log(torch.abs(ref_p_2_bond**2*torch.sin(ref_p_2_polar_angle)))
+        log_absdet += -torch.log(torch.abs(ref_p_3_bond**2*torch.sin(ref_p_3_polar_angle)))
         log_absdet += -torch.sum(torch.log(torch.abs(bond**2*torch.sin(math.pi - angle))), -1)
 
         return internal_coor, log_absdet

@@ -90,17 +90,24 @@ class MMFlow(nn.Module):
         base_dist = distributions.Uniform(low = self.base_dist_low,
                                           high = self.base_dist_high)
         base_dist = distributions.Independent(base_dist, 1)
-        
-        if context is not None:
+
+        if context is None:
+            z = base_dist.sample((num_samples,))
+            log_prob = base_dist.log_prob(z)
+
+            x, logabsdet = self._inverse(z, None)
+            log_prob = log_prob - logabsdet
+
+        else:
             context = context.repeat(num_samples, 1)
             
-        z = base_dist.sample((context.shape[0],))
-        log_prob = base_dist.log_prob(z)
+            z = base_dist.sample((context.shape[0],))
+            log_prob = base_dist.log_prob(z)
 
-        x, logabsdet = self._inverse(z, context)
-        log_prob = log_prob - logabsdet
+            x, logabsdet = self._inverse(z, context)
+            log_prob = log_prob - logabsdet
         
-        if context is not None:
             x = x.reshape(num_samples, -1, x.shape[-1])
             log_prob = log_prob.reshape(num_samples, -1)
+            
         return x, log_prob

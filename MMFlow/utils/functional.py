@@ -203,8 +203,6 @@ def compute_azimuthal_angle(xyz, particle_index):
     xyz_j = torch.index_select(xyz, 1, particle_index[:, 1])
 
     v = xyz_j - xyz_i
-    v = torch.index_select(v, -1, torch.tensor([0,1], device = v.device))
-    v = v / torch.sqrt(torch.sum(v**2, -1, keepdim = True))
     
     x = torch.index_select(v, -1, torch.tensor([0], device = v.device))
     y = torch.index_select(v, -1, torch.tensor([1], device = v.device))
