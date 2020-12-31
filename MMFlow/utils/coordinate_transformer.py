@@ -43,13 +43,13 @@ class CoordinateTransformer():
         of the bond on the x-y plane is used as the azimuthal angle. The Cartesian
         coordinate of particle_3 is specified similary as that of particle_2.
         Note the azimuthal angle used here is from (-pi, pi] instead of (0, 2*pi] 
-        as used in the standard spherical coordinate.
+        that is used in the standard spherical coordinate.
 
         With the Cartesian coordinates of the three reference particles defined,
         we can compute the Cartesian coordinates of other particles using their
         internal coordinates including bonds, angles and dihedral angles.
         Because internal coordinates of particles are defined with repect to 
-        other particles, we need to record specify and record this information,
+        other particles, we need to specify and record this information,
         i.e., for particle l, its internal coordinates are defined with respect 
         to particle i, j, and k using the bond (k-l), the angle (j-k-l) and 
         the dihedral angle (i-j-k-l). The Cartesian coordinate of particle l 
@@ -63,8 +63,8 @@ class CoordinateTransformer():
         particle k is bonded with particle_l, and particles i, j, and k 
         have been visited before particle l. In addition, we also record
         the order of particles that are visited. 
-        
 
+        
         Parameters:
         -----------
         particle_bonds: dictionary
