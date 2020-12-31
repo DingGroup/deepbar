@@ -15,7 +15,8 @@ def get_bonded_atoms(topology):
     -------
     out: dict
         out[i] = list of atom indices that are bonded with atom i.
-        If atom i is not bonded to any other atoms, out[i] = [].
+        If atom i is not bonded to any other atoms, out[i] will return
+        KeyError because the keys of out does not include i.
     """
     
     bonded_atoms = defaultdict(list)
@@ -24,7 +25,7 @@ def get_bonded_atoms(topology):
         atom2_index = bond.atom2.index
         bonded_atoms[atom1_index].append(atom2_index)
         bonded_atoms[atom2_index].append(atom1_index)
-    return bonded_atoms
+    return dict(bonded_atoms)
 
 def compute_particle_xyz_from_internal(particle_1_xyz,
                                        particle_2_xyz,
@@ -38,28 +39,30 @@ def compute_particle_xyz_from_internal(particle_1_xyz,
 
     Parameters:
     -----------
-    particle_1_xyz: Tensor 
+    particle_1_xyz: torch.Tensor 
         the Cartesian coordinate of atom 1.
-    particle_2_xyz: Tensor 
+    particle_2_xyz: torch.Tensor 
         the Cartesian coordinate of atom 2.
-    particle_3_xyz: Tensor 
+    particle_3_xyz: torch.Tensor 
         the Cartesian coordinate of atom 3.
-        Note particle_1_xyz, particle_2_xyz and particle_3_xyz have the same size: [batch_size, 3].
-    bond: Tensor
+        Note particle_1_xyz, particle_2_xyz and particle_3_xyz should the same size: [batch_size, 3].
+    bond: torch.Tensor
         the length of the bond between atom 3 and atom 4
-    angle: Tensor
+    angle: torch.Tensor
         the value of the angle between atom 2, atom 3 and atom 4
-    dihedral: Tensor
+    dihedral: torch.Tensor
         the value of the dihedral angle between atom 1, atom 2, atom3 and atom 4
         Note bond, angle and dihedral have the same size: [batch_size]
 
     Returns:
     --------
-    particle_4_xyz: Tensor
+    particle_4_xyz: torch.Tensor
         the Cartensian coordiante of atom 4. Its size is [batch_size, 3]
-    J:
+    logabsdet: the logarithm of the absolute value of the determinant of
+        the transformation from the internal coordinates of particle 4 
+        to its Cartesian coordinates
     """
-    
+
     ## calculate the coordinate of the forth atom
     wi, wj, wk = particle_1_xyz, particle_2_xyz, particle_3_xyz
 
@@ -95,9 +98,9 @@ def compute_distances(xyz, particle_index):
     
     Parameters:
     -----------
-    xyz: Tensor 
+    xyz: torch.Tensor 
         input tensor of shape :math:`(\text{frames} , \text{particles} , 3)`
-    particle_index: LongTensor
+    particle_index: torch.LongTensor
         particle index tensor of shape :math:`(\text{*} , 2)`
 
     """
@@ -113,9 +116,9 @@ def compute_angles(xyz, particle_index):
 
     Parameters:
     -----------
-    xyz: Tensor 
+    xyz: torch.Tensor 
         input tensor of shape :math:`(\text{frames} , \text{particles} , 3)`
-    particle_index: LongTensor
+    particle_index: torch.LongTensor
         particle index tensor of shape :math:`(\text{*} , 3)`
 
     """
@@ -140,9 +143,9 @@ def compute_dihedrals(xyz, particle_index):
 
     Parameters:
     -----------
-    xyz: Tensor 
+    xyz: torch.Tensor 
         input tensor of shape :math:`(\text{frames} , \text{particles} , 3)`
-    particle_index: LongTensor
+    particle_index: torch.LongTensor
         particle index tensor of shape :math:`(\text{*} , 4)`
 
     """
@@ -171,9 +174,9 @@ def compute_polar_angle(xyz, particle_index):
     
     Parameters:
     -----------
-    xyz: Tensor 
+    xyz: torch.Tensor 
         input tensor of shape :math:`(\text{frames} , \text{particles} , 3)`
-    particle_index: LongTensor
+    particle_index: torch.LongTensor
         particle index tensor of shape :math:`(\text{*} , 2)`
     """
     
@@ -193,9 +196,9 @@ def compute_azimuthal_angle(xyz, particle_index):
     
     Parameters:
     -----------
-    xyz: Tensor 
+    xyz: torch.Tensor 
         input tensor of shape :math:`(\text{frames} , \text{particles} , 3)`
-    particle_index: LongTensor
+    particle_index: torch.LongTensor
         particle index tensor of shape :math:`(\text{*} , 2)`
     """
     
@@ -210,4 +213,3 @@ def compute_azimuthal_angle(xyz, particle_index):
     angles = torch.atan2(y, x)
     
     return angles
-
