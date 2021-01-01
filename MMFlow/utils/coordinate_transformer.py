@@ -18,7 +18,8 @@ class CoordinateTransformer():
                  particle_bonds,
                  reference_particle_1,
                  reference_particle_2,
-                 reference_particle_3):
+                 reference_particle_3,
+                 dihedral_mode = 'fork'):
         
         """ The CoordinateTransformer class is initialized using
         the bond information of a molecule and three particles used
@@ -58,11 +59,38 @@ class CoordinateTransformer():
         that of particle l. The method used here to respect the dependency is
         to explore particles in the molecule via bread-first search on the 
         molecule graph with particles as nodes and bonds as edges. As we 
-        visit each particle l, we record three other particles i,j, and k 
-        such that particles i, j , and k are successively bonded,
+        visit each particle l, we record three other particles i,j, and k.
+        In addition, we also record the order of particles that are visited. 
+
+        For a given particle l, there are multiple ways to choose the particles
+        i, j, and k. The prameter dihedral_mode specifies two ways.
+
+        When dihedral_mode is 'linear', particles, i, j, and k, are chosen based
+        on the parent-child releationship specified during the breadth-first search,
+        i.e., particles i, j , and k are successively bonded,
         particle k is bonded with particle_l, and particles i, j, and k 
-        have been visited before particle l. In addition, we also record
-        the order of particles that are visited. 
+        have been visited before particle l.
+
+        The way of chosing particles i,j,and k with dihedral_mode being 'linear' tends
+        to make many dihedral angles have multimodal distribution. For instance,
+        if we have the following structure
+
+                        H1
+                       /
+        C3 -- C2 -- C1 -- H2
+                       \\
+                        H3
+        
+        the dihedral angles for H1, H2, and H3 will be C3-C2-C1-H1, C3-C2-C1-H2, C3-C2-C1-H3.
+        If the methy group can rotate, all the three dihedral angles for H1, H2 and H3 will
+        have multimodal distributions.
+
+        One way to decrease the number of dihedral angles that have multimodal distributions 
+        is to set dihedral_mode to 'fork'. It uses the dihedral angle D3-C2-C1-H1 for H1, 
+        uses the dihedral H1-C2-C1-H2 for H2 and used the dihedral H1-C2-C1-H3 for H3. 
+        In this way, even though the methy group can rotate, the dihedrals H1-C2-C1-H2 and 
+        H1-C2-C1-H3 have monomodal distributions. Therefore, the argument dihedral_mode
+        is set to 'fork' by default
 
         
         Parameters:
@@ -79,6 +107,11 @@ class CoordinateTransformer():
             The index of the reference particle 2
         reference_particle_3: Int
             The index of the reference particle 3
+        dihedral_mode: Str
+            The mode used to choose the three particles (i,j,k) to specify
+            the internal coordinate of particle l.            
+            There are two possible modes: 'fork' or 'linear', so it should be
+            set to either 'fork' or 'linear'. By default, it is 'fork'.                       
         """        
         
         self.particle_bonds = particle_bonds
@@ -88,6 +121,11 @@ class CoordinateTransformer():
         self.ref_particle_2 = reference_particle_2
         self.ref_particle_3 = reference_particle_3
 
+        self.dihedral_mode = dihedral_mode
+        if self.dihedral_mode not in ['linear', 'fork']:
+            raise ValueError("""The argument dihedral_mode has to be either 
+                             'linear' or 'fork' """)
+        
         ## parent_particle[j] = i if particle_j is discoverd
         ## by particle_i in bread-first search
         self.parent_particle = {}
@@ -138,47 +176,116 @@ class CoordinateTransformer():
                     self.ref_particle_1,
                     p)                    
 
-        ## particles bonded with self.ref_particle_2
-        for p in self.particle_bonds[self.ref_particle_2]:
-            if p not in [self.ref_particle_1, self.ref_particle_3] and \
-               particle_visit_flag[p] is False:
-                self.particle_visited_in_order.append(p)
-                self.parent_particle[p] = self.ref_particle_2
-                Q.append(p)
-                particle_visit_flag[p] = True
-                
-                self.bond_particle_idx[p] = (self.ref_particle_2, p)
-                self.angle_particle_idx[p] = (
-                    self.ref_particle_1,
-                    self.ref_particle_2,
-                    p)
-                self.dihedral_particle_idx[p] = (
-                    self.ref_particle_3,
-                    self.ref_particle_1,
-                    self.ref_particle_2,
-                    p)
-        
-        ## bead-first search for all other particles
-        while Q:
-            pivot_p = Q.popleft()
-            for p in self.particle_bonds[pivot_p]:
-                if particle_visit_flag[p] is False:
+        if self.dihedral_mode == "linear":
+            ## particles bonded with self.ref_particle_2
+            for p in self.particle_bonds[self.ref_particle_2]:
+                if p not in [self.ref_particle_1, self.ref_particle_3] and \
+                   particle_visit_flag[p] is False:
                     self.particle_visited_in_order.append(p)
-                    self.parent_particle[p] = pivot_p
+                    self.parent_particle[p] = self.ref_particle_2
                     Q.append(p)
                     particle_visit_flag[p] = True
 
-                    self.bond_particle_idx[p] = (pivot_p, p)
+                    self.bond_particle_idx[p] = (self.ref_particle_2, p)
                     self.angle_particle_idx[p] = (
-                        self.parent_particle[pivot_p],
-                        pivot_p,
+                        self.ref_particle_1,
+                        self.ref_particle_2,
                         p)
                     self.dihedral_particle_idx[p] = (
-                        self.parent_particle[self.parent_particle[pivot_p]],
-                        self.parent_particle[pivot_p],
-                        pivot_p,
+                        self.ref_particle_3,
+                        self.ref_particle_1,
+                        self.ref_particle_2,
                         p)
                     
+            ## bead-first search for all other particles
+            while Q:
+                pivot_p = Q.popleft()
+                for p in self.particle_bonds[pivot_p]:
+                    if particle_visit_flag[p] is False:
+                        self.particle_visited_in_order.append(p)
+                        self.parent_particle[p] = pivot_p
+                        Q.append(p)
+                        particle_visit_flag[p] = True
+
+                        self.bond_particle_idx[p] = (pivot_p, p)
+                        self.angle_particle_idx[p] = (
+                            self.parent_particle[pivot_p],
+                            pivot_p,
+                            p)
+                        self.dihedral_particle_idx[p] = (
+                            self.parent_particle[self.parent_particle[pivot_p]],
+                            self.parent_particle[pivot_p],
+                            pivot_p,
+                            p)
+
+        if self.dihedral_mode == "fork":
+            ## particles bonded with self.ref_particle_2
+            first_child_particle = None
+            for p in self.particle_bonds[self.ref_particle_2]:
+                if p not in [self.ref_particle_1, self.ref_particle_3] and \
+                   particle_visit_flag[p] is False:
+                    self.particle_visited_in_order.append(p)
+                    self.parent_particle[p] = self.ref_particle_2
+                    Q.append(p)
+                    particle_visit_flag[p] = True
+
+                    self.bond_particle_idx[p] = (self.ref_particle_2, p)
+                    self.angle_particle_idx[p] = (
+                        self.ref_particle_1,
+                        self.ref_particle_2,
+                        p)
+                    
+                    if first_child_particle is None:
+                        first_child_particle = p
+                        self.dihedral_particle_idx[p] = (
+                            self.ref_particle_3,
+                            self.ref_particle_1,
+                            self.ref_particle_2,
+                            p)
+                    else:
+                        self.dihedral_particle_idx[p] = (
+                            first_child_particle,
+                            self.ref_particle_1,
+                            self.ref_particle_2,
+                            p)                        
+                    
+            ## bead-first search for all other particles
+            while Q:
+                pivot_p = Q.popleft()
+                
+                # the first node that is discovred from pivot_p
+                # it will be used in defining the dihedral angles for
+                # other node that are discoved from pivot_p
+                first_child_particle = None 
+                
+                for p in self.particle_bonds[pivot_p]:
+                    if particle_visit_flag[p] is False:
+                        self.particle_visited_in_order.append(p)
+                        self.parent_particle[p] = pivot_p
+                        Q.append(p)
+                        particle_visit_flag[p] = True
+
+                        self.bond_particle_idx[p] = (pivot_p, p)
+                        self.angle_particle_idx[p] = (
+                            self.parent_particle[pivot_p],
+                            pivot_p,
+                            p)
+
+                        if first_child_particle is None:
+                            first_child_particle = p
+                            self.dihedral_particle_idx[p] = (
+                                self.parent_particle[self.parent_particle[pivot_p]],
+                                self.parent_particle[pivot_p],
+                                pivot_p,
+                                p)
+                        else:
+                            self.dihedral_particle_idx[p] = (
+                                first_child_particle,                                
+                                self.parent_particle[pivot_p],
+                                pivot_p,
+                                p)
+                            
+                        
     def compute_xyz_from_internal_coordinate_and_orientation(
             self,
             particle_1_xyz,

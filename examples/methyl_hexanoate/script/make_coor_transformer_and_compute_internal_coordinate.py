@@ -8,6 +8,10 @@ import torch
 from sys import exit
 import os
 import argparse
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.pyplot as plt
+import os
+import math
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--solvent", type = str, choices = ['OBC2', 'vacuum'], required = True)
@@ -24,7 +28,8 @@ coor_transformer = MMFlow.utils.CoordinateTransformer(
     bonds,
     reference_particle_1,
     reference_particle_2,
-    reference_particle_3
+    reference_particle_3,
+    dihedral_mode = 'fork'
 )
 
 with open(f"./output/{args.solvent}/coordinate_transformer.pkl", 'wb') as file_handle:
@@ -44,5 +49,15 @@ ic_md_limits = {
 
 torch.save(ic_md_limits, f"./output/{args.solvent}/ic_md_limits.pt")
 
+dihedral = ic_md.dihedral.numpy()
 
-    
+os.makedirs(f"./output/{args.solvent}/plots", exist_ok = True)
+with PdfPages(f"./output/{args.solvent}/plots/dihedral_dist_md_new.pdf") as pdf:
+    for j in range(dihedral.shape[-1]):
+        print(j)
+        fig = plt.figure(0)
+        fig.clf()
+        plt.hist(dihedral[:, j], bins = 30, range = [-math.pi, math.pi], density = True, alpha = 1.0, label = 'md')
+        plt.legend()
+        pdf.savefig(fig)
+        

@@ -75,19 +75,19 @@ with torch.no_grad():
     feature_flow, log_prob = mmflow.sample_and_compute_log_prob(1, context_flow)
 feature_flow = torch.squeeze(feature_flow)
 
-# with PdfPages("./output/plots/feature_dist.pdf") as pdf:
-#     for j in range(feature.shape[-1]):
-#         print(j)
-#         fig = plt.figure(0)
-#         fig.clf()
-#         if circular_feature_flag[j] > 0:
-#             plt.hist(feature[:, j].numpy(), bins = 30, range = [-math.pi, math.pi], density = True, weights = prob, alpha = 0.5, label = 'md')
-#             plt.hist(feature_flow[:, j].numpy(), bins = 30, range = [-math.pi, math.pi], density = True, alpha = 0.5, label = 'mmflow')            
-#         else:
-#             plt.hist(feature[:, j].numpy(), bins = 30, range = [0.0, 1.0], density = True, weights = prob, alpha = 0.5, label = 'md')
-#             plt.hist(feature_flow[:, j].numpy(), bins = 30, range = [0.0, 1.0], density = True, alpha = 0.5, label = 'mmflow')
-#         plt.legend()
-#         pdf.savefig(fig)
+with PdfPages("./output/plots/feature_dist.pdf") as pdf:
+    for j in range(feature.shape[-1]):
+        print(j)
+        fig = plt.figure(0)
+        fig.clf()
+        if circular_feature_flag[j] > 0:
+            plt.hist(feature[:, j].numpy(), bins = 30, range = [-math.pi, math.pi], density = True, weights = prob, alpha = 0.5, label = 'md')
+            plt.hist(feature_flow[:, j].numpy(), bins = 30, range = [-math.pi, math.pi], density = True, alpha = 0.5, label = 'mmflow')            
+        else:
+            plt.hist(feature[:, j].numpy(), bins = 30, range = [0.0, 1.0], density = True, weights = prob, alpha = 0.5, label = 'md')
+            plt.hist(feature_flow[:, j].numpy(), bins = 30, range = [0.0, 1.0], density = True, alpha = 0.5, label = 'mmflow')
+        plt.legend()
+        pdf.savefig(fig)
 
 ic_flow = utils.InternalCoordinate(
     reference_particle_1_xyz =  torch.zeros(num_samples, 3),
