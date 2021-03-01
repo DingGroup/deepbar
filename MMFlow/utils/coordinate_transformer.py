@@ -620,7 +620,7 @@ class CoordinateTransformer():
         
         ## compute logabsdet of the transform
         log_absdet = -torch.log(ref_p_3_bond)
-        log_absdet += -torch.sum(torch.log(torch.abs(bond**2*torch.sin(math.pi - angle))), -1)
+        log_absdet = log_absdet -torch.sum(torch.log(torch.abs(bond**2*torch.sin(math.pi - angle))), -1)
 
         return internal_coor, log_absdet
 
