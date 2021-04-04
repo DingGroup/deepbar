@@ -42,6 +42,8 @@ traj_vacuum = mdtraj.load_dcd(f"./output/vacuum/traj/traj_md.dcd",
 traj_OBC2 = mdtraj.load_dcd(f"./output/OBC2/traj/traj_md.dcd",
                        top = topology, stride = 1)
 
+
+
 traj = traj_vacuum + traj_OBC2
 xyz = traj.xyz
 

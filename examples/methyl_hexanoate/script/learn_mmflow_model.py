@@ -35,7 +35,7 @@ hidden_size = args.hidden_size
 
 print(f"num_transforms: {num_transforms}, hidden_size: {hidden_size}")
 
-data = torch.load(f"./output/{args.solvent}/ic_md.pt")
+data = torch.load(f"./output/{args.solvent}/ic_md_first_half.pt")
 ic_md = data['ic_md']
 ic_md_limits = torch.load(f"./output/{args.solvent}/ic_md_limits.pt")
 
@@ -91,7 +91,7 @@ context_train = context[train_sample_flag]
 feature_validation = feature[~train_sample_flag]
 context_validation = context[~train_sample_flag]
 
-batch_size = 1024*2
+batch_size = 1024
 dataset = torch.utils.data.TensorDataset(feature_train, context_train)
 dataloader = torch.utils.data.DataLoader(dataset, batch_size, shuffle = True)
 
@@ -101,9 +101,10 @@ mmflow = mmflow.to(device)
 
 optimizer = optim.Adam(mmflow.parameters(), lr=1e-3)
 num_epoch = 300
-scheduler = ReduceLROnPlateau(optimizer, 'min', factor = 0.5, patience = 5, threshold = 1e-3)
+#scheduler = ReduceLROnPlateau(optimizer, 'min', factor = 0.5, patience = 5, threshold = 1e-3)
 
 loss_record = []
+current_loss = np.inf
 for epoch in range(num_epoch):
     mmflow.train()
     start_time = time.time()
@@ -138,11 +139,12 @@ for epoch in range(num_epoch):
         loss = -torch.mean(log_density.cpu())
         loss_record.append(loss.item())
     print(f"epoch: {epoch:>5}, validation_loss: {loss.item():.3f}", flush = True)
-    
-    scheduler.step(loss.item())
+    #scheduler.step(loss.item())
 
     os.makedirs(f"./output/{args.solvent}/mmflow_models_hidden_size_{hidden_size}_num_transforms_{num_transforms}", exist_ok = True)
-    if (epoch + 1) % 10 == 0:
+
+    if loss.item() <= current_loss:
+        current_loss = loss.item()
         torch.save({'feature_size': feature_size,
                     'context_size': context_size,
                     'circular_feature_flag': circular_feature_flag,
@@ -152,6 +154,11 @@ for epoch in range(num_epoch):
                     'num_transforms': num_transforms,
                     'num_bins_circular': num_bins_circular,
                     'num_bins_regular': num_bins_regular,
-                    'state_dict': mmflow.state_dict()},
-                   f"./output/{args.solvent}/mmflow_models_hidden_size_{hidden_size}_num_transforms_{num_transforms}/mmflow_model_epoch_{epoch}.pt")
+                    'state_dict': mmflow.state_dict(),
+                    'epoch': epoch,
+                    'loss_record': loss_record},
+                   f"./output/{args.solvent}/mmflow_models_hidden_size_{hidden_size}_num_transforms_{num_transforms}/mmflow_model.pt")
+    else:
+        break
+    
 exit()

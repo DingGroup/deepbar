@@ -52,6 +52,7 @@ topology = mdtraj.load_prmtop(f"./structure/{mol_id}.prmtop")
 traj = mdtraj.load_dcd(f"./output/{args.solvent}/traj/traj_md.dcd",
                        top = topology, stride = 1)
 xyz = traj.xyz
+xyz = xyz[xyz.shape[0]//2:]
 
 log_p_md = []
 for i in range(xyz.shape[0]):

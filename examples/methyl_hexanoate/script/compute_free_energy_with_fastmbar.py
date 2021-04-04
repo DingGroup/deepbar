@@ -42,7 +42,7 @@ energy_matrix[1, 0:len(log_p_flow)] = -log_p_flow
 energy_matrix[1, len(log_p_flow):] = -log_p_md
 
 num_conf = np.array([len(log_q_flow), len(log_q_md)])
-fastmbar = FastMBAR(energy_matrix, num_conf, verbose = True, bootstrap = True)
-
+#fastmbar = FastMBAR(energy_matrix, num_conf, verbose = True, bootstrap = True)
+fastmbar = FastMBAR(energy_matrix, num_conf, verbose = True)
 
     

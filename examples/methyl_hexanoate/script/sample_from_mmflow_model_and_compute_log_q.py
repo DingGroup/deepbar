@@ -36,8 +36,7 @@ print(f"num_transforms: {num_transforms}, hidden_size: {hidden_size}")
 mol_id = "mobley_1017962"
 
 ## load mmflow model
-epoch = 299
-data = torch.load(f"./output/{args.solvent}/mmflow_models_hidden_size_{hidden_size}_num_transforms_{num_transforms}/mmflow_model_epoch_{epoch}.pt")
+data = torch.load(f"./output/{args.solvent}/mmflow_models_hidden_size_{hidden_size}_num_transforms_{num_transforms}/mmflow_model.pt")
 
 conditioner_net_create_fn = lambda feature_size, context_size, output_size: \
     transform.ResidualNet(feature_size,
@@ -61,7 +60,7 @@ if torch.cuda.is_available():
 mmflow = mmflow.to(device)
 
 ## sample from mmflow model
-data = torch.load(f"./output/{args.solvent}/ic_md.pt")
+data = torch.load(f"./output/{args.solvent}/ic_md_second_half.pt")
 ic_md = data['ic_md']
 ic_md_logabsdet = data['ic_md_logabsdet']
 ic_md_limits = torch.load(f"./output/{args.solvent}/ic_md_limits.pt")
@@ -85,7 +84,7 @@ context_dist = distributions.MultivariateNormal(loc = context_mean,
                                                 covariance_matrix = context_cov)
 
 
-num_samples = 10_000
+num_samples = len(ic_md)
 context_flow = context_dist.sample((num_samples,))
 log_q_context_flow = context_dist.log_prob(context_flow)
 log_q_context_md = context_dist.log_prob(context_md)

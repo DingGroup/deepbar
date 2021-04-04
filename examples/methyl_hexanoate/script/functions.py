@@ -5,10 +5,10 @@ from MMFlow import utils
 
 def ic_to_feature_and_context(ic, ic_limits):
     reference_particle_3_angle = (ic.reference_particle_3_angle - ic_limits['reference_particle_3_angle_min']) / (ic_limits['reference_particle_3_angle_max'] - ic_limits['reference_particle_3_angle_min'])
-    reference_particle_3_angle = reference_particle_3_angle*0.8 + 0.1
+    reference_particle_3_angle = reference_particle_3_angle*0.95 + 0.025
 
     angle = (ic.angle - ic_limits['angle_min']) / (ic_limits['angle_max'] - ic_limits['angle_min'])
-    angle = angle*0.8 + 0.1
+    angle = angle*0.95 + 0.025
     
     feature = torch.cat([reference_particle_3_angle[:, None],
                          angle,
@@ -22,8 +22,8 @@ def ic_to_feature_and_context(ic, ic_limits):
                          ic.reference_particle_3_bond[:, None],
                          ic.bond], -1)
 
-    logabsdet_jacobian = torch.log(0.8/(ic_limits['reference_particle_3_angle_max']-ic_limits['reference_particle_3_angle_min'])) + \
-        torch.sum(torch.log(0.8/(ic_limits['angle_max'] - ic_limits['angle_min'])))
+    logabsdet_jacobian = torch.log(0.95/(ic_limits['reference_particle_3_angle_max']-ic_limits['reference_particle_3_angle_min'])) + \
+        torch.sum(torch.log(0.95/(ic_limits['angle_max'] - ic_limits['angle_min'])))
     
     return circular_feature_flag, feature, context, logabsdet_jacobian
 
@@ -36,11 +36,11 @@ def feature_and_context_to_ic(feature, context, ic_limits):
     bond = context[:, 2:]
 
     reference_particle_3_angle = feature[:, 0] 
-    reference_particle_3_angle = (reference_particle_3_angle - 0.1)/0.8
+    reference_particle_3_angle = (reference_particle_3_angle - 0.025)/0.95
     reference_particle_3_angle = ic_limits['reference_particle_3_angle_min'] + reference_particle_3_angle*(ic_limits['reference_particle_3_angle_max'] - ic_limits['reference_particle_3_angle_min'])
 
     angle = feature[:, 1:1+bond.shape[1]]
-    angle = (angle - 0.1)/0.8
+    angle = (angle - 0.025)/0.95
     angle = ic_limits['angle_min'] + angle*(ic_limits['angle_max'] - ic_limits['angle_min'])
     
     dihedral = feature[:, 1+bond.shape[1]:]
@@ -53,7 +53,7 @@ def feature_and_context_to_ic(feature, context, ic_limits):
         bond, angle, dihedral
     )
 
-    logabsdet_jacobian = torch.log((ic_limits['reference_particle_3_angle_max']-ic_limits['reference_particle_3_angle_min'])/0.8) + \
-        torch.sum(torch.log((ic_limits['angle_max'] - ic_limits['angle_min'])/0.8))
+    logabsdet_jacobian = torch.log((ic_limits['reference_particle_3_angle_max']-ic_limits['reference_particle_3_angle_min'])/0.95) + \
+        torch.sum(torch.log((ic_limits['angle_max'] - ic_limits['angle_min'])/0.95))
     
     return ic, logabsdet_jacobian
