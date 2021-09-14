@@ -8,6 +8,8 @@ import simtk.openmm.app.element as element
 import math
 from collections import deque, OrderedDict, defaultdict, namedtuple
 import MMFlow.utils.functional as functional
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 class CoordinateTransformer():
     """ A class used for transforming internal coordinates into 
@@ -685,6 +687,18 @@ class InternalCoordinateAndOrientation():
         self.angle = self.angle.float()
         self.dihedral = self.dihedral.float()                
 
+    def numpy(self):
+        self.reference_particle_1_xyz = self.reference_particle_1_xyz.numpy()
+        self.reference_particle_2_bond = self.reference_particle_2_bond.numpy()
+        self.reference_particle_2_polar_angle = self.reference_particle_2_polar_angle.numpy()
+        self.reference_particle_2_azimuthal_angle = self.reference_particle_2_azimuthal_angle.numpy()
+        self.reference_particle_3_bond = self.reference_particle_3_bond.numpy()
+        self.reference_particle_3_polar_angle = self.reference_particle_3_polar_angle.numpy()
+        self.reference_particle_3_azimuthal_angle = self.reference_particle_3_azimuthal_angle.numpy()
+        self.bond = self.bond.numpy()
+        self.angle = self.angle.numpy()
+        self.dihedral = self.dihedral.numpy()                
+        
     def __len__(self):
         return self.reference_particle_1_xyz.shape[0]
 
@@ -750,6 +764,15 @@ class InternalCoordinate():
         self.angle = self.angle.float()
         self.dihedral = self.dihedral.float()
 
+    def numpy(self):
+        self.reference_particle_1_xyz = self.reference_particle_1_xyz.numpy()
+        self.reference_particle_2_bond = self.reference_particle_2_bond.numpy()
+        self.reference_particle_3_bond = self.reference_particle_3_bond.numpy()
+        self.reference_particle_3_angle = self.reference_particle_3_angle.numpy()
+        self.bond = self.bond.numpy()
+        self.angle = self.angle.numpy()
+        self.dihedral = self.dihedral.numpy()
+        
     def __len__(self):
         return self.reference_particle_1_xyz.shape[0]
 
@@ -762,3 +785,43 @@ class InternalCoordinate():
                                 self.angle[index],
                                 self.dihedral[index])
         return ic
+
+    def plot(self, file_name, weights = None):
+        if not file_name.lower().endswith(".pdf"):
+            raise ValueError("file_name needs to end with .pdf!")
+            
+        with PdfPages(file_name) as pdf:    
+            fig = plt.figure(figsize = (6.4*3, 4.8))
+            fig.clf()
+            plt.subplot(1, 3, 1)
+            plt.hist(self.reference_particle_2_bond.numpy(), bins = 50, density = True, label = f"reference_particle_2_bond", weights = weights)
+            plt.legend()
+
+            plt.subplot(1, 3, 2)    
+            plt.hist(self.reference_particle_3_bond.numpy(), bins = 50, density = True, label = f"reference_particle_3_bond", weights = weights)
+            plt.legend()
+
+            plt.subplot(1, 3, 3)
+            plt.hist(self.reference_particle_3_angle.numpy(), bins = 50, density = True, label = f"reference_particle_3_angle", weights = weights, range = [0, np.pi])
+            plt.legend()
+
+            plt.tight_layout()
+            pdf.savefig(fig)
+
+            for j in range(self.bond.shape[1]):
+                fig = plt.figure(figsize = (6.4*3, 4.8))
+                fig.clf()
+                plt.subplot(1, 3, 1)
+                plt.hist(self.bond[:,j].numpy(), bins = 50, density = True, label = f"bond: {j}", weights = weights)
+                plt.legend()
+
+                plt.subplot(1, 3, 2)
+                plt.hist(self.angle[:,j].numpy(), bins = 50, density = True, label = f"angle: {j}", weights = weights, range = [0, np.pi])
+                plt.legend()
+
+                plt.subplot(1, 3, 3)
+                plt.hist(self.dihedral[:,j].numpy(), bins = 50, density = True, label = f"dihedral: {j}", weights = weights, range = [-np.pi, np.pi])
+                plt.legend()
+
+                plt.tight_layout()
+                pdf.savefig(fig)
