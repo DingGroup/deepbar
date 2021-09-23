@@ -15,7 +15,7 @@ setup(
     packages = find_packages(),
     install_requires=['numpy>=1.21.0',
                       'torch>=1.8.0',
-                      'openmm>=7.5.1'],
+                      'openmm>=7.6.0'],
     license = 'MIT',
     classifiers = [
         "Programming Language :: Python :: 3",
