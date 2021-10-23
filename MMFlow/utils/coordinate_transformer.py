@@ -807,7 +807,8 @@ class InternalCoordinate():
 
             plt.tight_layout()
             pdf.savefig(fig)
-
+            plt.close()
+            
             for j in range(self.bond.shape[1]):
                 fig = plt.figure(figsize = (6.4*3, 4.8))
                 fig.clf()
@@ -825,3 +826,4 @@ class InternalCoordinate():
 
                 plt.tight_layout()
                 pdf.savefig(fig)
+                plt.close()
