@@ -213,3 +213,23 @@ def compute_azimuthal_angle(xyz, particle_index):
     angles = torch.atan2(y, x)
     
     return angles
+
+def compute_distances(xyz, particle_index):
+    """ Compute distances between sets of two particles.
+
+    Parameters:
+    -----------
+    xyz: torch.Tensor 
+        input tensor of shape :math:`(\text{frames} , \text{particles} , 3)`
+    particle_index: torch.LongTensor
+        particle index tensor of shape :math:`(\text{*} , 2)`
+
+    """
+
+    xyz_i = torch.index_select(xyz, 1, particle_index[:, 0])
+    xyz_j = torch.index_select(xyz, 1, particle_index[:, 1])
+    v = xyz_i - xyz_j
+    
+    distances = torch.sqrt(torch.sum(v**2, -1))
+
+    return distances

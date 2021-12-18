@@ -1,3 +1,5 @@
 from MMFlow.utils.coordinate_transformer import CoordinateTransformer
 from MMFlow.utils.coordinate_transformer import InternalCoordinate, InternalCoordinateAndOrientation
 from MMFlow.utils.functional import get_bonded_atoms
+from MMFlow.utils.functional import compute_angles
+from MMFlow.utils.functional import compute_dihedrals
