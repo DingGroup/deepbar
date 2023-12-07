@@ -1,0 +1,24 @@
+dim: 2
+
+model:
+  d_model: 512
+  num_layers: 8
+  actfn: swish
+  fourier: null
+  atol: 1e-7
+  rtol: 1e-7
+  metric_normalize: False
+
+optim:
+  num_iterations: 1000000
+  batch_size: 128
+  val_batch_size: 20000
+
+  scheduler: cosine
+  grad_clip: 0.0
+  lr: 1e-4
+  wd: 0.0
+  eps: 1e-8
+  ema_decay: 0.999
+
+val_every: 1000

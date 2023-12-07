@@ -1,0 +1,62 @@
+#!/home/xqding/apps/miniconda3/envs/jop/bin/python
+#SBATCH --job-name=sampling
+#SBATCH --time=05:00:00
+#SBATCH --partition=gpu
+#SBATCH --cpus-per-task=1
+#SBATCH --array=0-624
+#SBATCH --output=./slurm_output/sampling_%a.log
+#SBATCH --open-mode=truncate
+
+import openmm.app  as app
+import openmm as mm
+import openmm.unit as unit
+import math
+import os
+import numpy as np
+from sys import exit
+
+## equilibrium theta in torsion biasing potential
+M = 25
+theta1 = np.linspace(-math.pi, math.pi, M, endpoint = False)
+theta2 = np.linspace(-math.pi, math.pi, M, endpoint = False)
+
+job_index = int(os.environ['SLURM_ARRAY_TASK_ID'])
+theta1_index = job_index // M
+theta2_index = job_index % M
+
+## read system
+with open("./structure/system_with_bias.xml", 'r') as file_handle:
+    xml = file_handle.read()    
+system = mm.XmlSerializer.deserialize(xml)
+
+## setup context
+platform = mm.Platform.getPlatformByName('Reference')
+T = 298.15 * unit.kelvin
+fricCoef = 10/unit.picoseconds
+stepsize = 1 * unit.femtoseconds
+integrator = mm.LangevinMiddleIntegrator(T, fricCoef, stepsize)
+
+
+topology = mm.app.AmberPrmtopFile("./structure/alanine_dipeptide.prmtop").topology
+sim = app.Simulation(topology, system, integrator, platform)
+
+pdb = app.PDBFile("./structure/alanine_dipeptide.pdb")
+sim.context.setPositions(pdb.positions)
+
+## set equilibrium theta for biasing potential
+sim.context.setParameter("theta1", theta1[theta1_index])
+sim.context.setParameter("theta2", theta2[theta2_index])
+
+## minimize
+sim.minimizeEnergy()
+
+## initial equilibrium
+sim.context.setVelocitiesToTemperature(T)
+sim.step(100_000)
+
+os.makedirs(f"./output/umbrella_sampling/traj", exist_ok = True)
+
+reporter = app.DCDReporter(f"./output/umbrella_sampling/traj/traj_{job_index}.dcd", 1000)
+sim.reporters.append(reporter)
+sim.step(5_000_000)
+
