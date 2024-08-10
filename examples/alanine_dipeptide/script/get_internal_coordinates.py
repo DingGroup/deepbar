@@ -5,7 +5,7 @@ import numpy as np
 import mdtraj
 import sys
 sys.path.append("/home/xqding/course/projectsOnGitHub/MMFlow/")
-import MMFlow
+import deepbar
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
@@ -22,11 +22,11 @@ import math
 topology = mdtraj.load_prmtop("./structure/alanine_dipeptide.prmtop")
 
 ## make a CoordinateTransformer
-particle_bonds = MMFlow.utils.get_bonded_atoms(topology)
+particle_bonds = deepbar.utils.get_bonded_atoms(topology)
 reference_particle_1 = 1
 reference_particle_2 = 0
 reference_particle_3 = 2
-coor_transformer = MMFlow.utils.CoordinateTransformer(
+coor_transformer = deepbar.utils.CoordinateTransformer(
     particle_bonds,
     reference_particle_1,
     reference_particle_2,

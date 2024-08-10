@@ -9,7 +9,7 @@ import math
 from sys import exit
 import sys
 sys.path.append("../../")
-from MMFlow import transform, MMFlow, utils
+from deepbar import transform, NFlow, utils
 sys.path.append("./script/")
 from functions import *
 import pickle
@@ -66,7 +66,7 @@ conditioner_net_create_fn = lambda feature_size, context_size, output_size: \
 
 num_bins_regular = 4
 num_bins_circular = 4
-mmflow = MMFlow(feature_size, context_size,
+mmflow = NFlow(feature_size, context_size,
                 circular_feature_flag,
                 transform_feature_flag,
                 conditioner_net_create_fn,

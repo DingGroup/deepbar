@@ -2,7 +2,7 @@ import mdtraj
 from collections import defaultdict
 import sys
 sys.path.append("../../")
-import MMFlow
+import deepbar
 import pickle
 import torch
 from sys import exit
@@ -20,14 +20,14 @@ args = parser.parse_args()
 mol_id = "mobley_1017962"
 topology = mdtraj.load_prmtop(f"./structure/{mol_id}.prmtop")
 
-bonds = MMFlow.utils.get_bonded_atoms(topology)
+bonds = deepbar.utils.get_bonded_atoms(topology)
 ## Pick three reference particles such that reference_particle_2 and
 ## reference_particle_3 are bonded with reference_particle_1.
 ## You will need to change the following three numbers based on specific molecules
 reference_particle_1 = 3 ## C4
 reference_particle_2 = 2 ## C3
 reference_particle_3 = 4 ## C5
-coor_transformer = MMFlow.utils.CoordinateTransformer(
+coor_transformer = deepbar.utils.CoordinateTransformer(
     bonds,
     reference_particle_1,
     reference_particle_2,

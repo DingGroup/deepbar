@@ -1,7 +1,7 @@
 import torch
 import sys
 sys.path.append("../../")
-from MMFlow import utils
+from deepbar import utils
 
 def ic_to_feature_and_context(ic, ic_limits):
     reference_particle_3_angle = (ic.reference_particle_3_angle - ic_limits['reference_particle_3_angle_min']) / (ic_limits['reference_particle_3_angle_max'] - ic_limits['reference_particle_3_angle_min'])

@@ -10,7 +10,7 @@ import simtk.openmm.app as app
 import simtk.unit as unit
 import sys
 sys.path.append("../../")
-from MMFlow import transform, MMFlow, utils
+from deepbar import transform, NFlow, utils
 sys.path.append("./script/")
 from functions import *
 from sys import exit

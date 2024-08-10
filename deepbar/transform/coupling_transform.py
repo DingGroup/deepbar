@@ -1,8 +1,8 @@
 import math
 import torch
 import torch.nn as nn
-from MMFlow.transform.rational_quadratic_spline import *
-from MMFlow.transform.resnet import *
+from deepbar.transform.rational_quadratic_spline import *
+from deepbar.transform.resnet import *
 
 class MixedRationalQuadraticCouplingTransform(nn.Module):
     def __init__(self,

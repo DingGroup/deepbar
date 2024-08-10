@@ -1,8 +1,5 @@
-import numpy as np
-import pickle
 import simtk.openmm as omm
 import simtk.openmm.app as app
-from sys import stdout, exit
 import os
 import argparse
 
@@ -10,10 +7,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--solvent", type = str, choices = ['OBC2', 'vacuum'], required = True)
 args = parser.parse_args()
 
-mol_id = "mobley_1017962"
+name = "methyl_hexanoate"
 
 ## make a system with OBC2 implicit solvent
-prmtop = app.AmberPrmtopFile(f"./structure/{mol_id}.prmtop")
+prmtop = app.AmberPrmtopFile(f"./structure/{name}.prmtop")
 
 if args.solvent == "OBC2":
     system = prmtop.createSystem(nonbondedMethod=app.NoCutoff,
@@ -26,8 +23,8 @@ elif args.solvent == "vacuum":
                                  implicitSolvent=None,
                                  removeCMMotion=True)    
     
-inpcrd = app.AmberInpcrdFile(f"./structure/{mol_id}.inpcrd")
-with open(f"./structure/{mol_id}_{args.solvent}.xml", 'w') as file_handle:
+inpcrd = app.AmberInpcrdFile(f"./structure/{name}.inpcrd")
+with open(f"./structure/{name}_{args.solvent}.xml", 'w') as file_handle:
     file_handle.write(omm.XmlSerializer.serializeSystem(system))
 
 ## contruct the context

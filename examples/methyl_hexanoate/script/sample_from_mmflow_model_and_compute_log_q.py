@@ -10,7 +10,7 @@ import simtk.openmm.app as app
 import simtk.unit as unit
 import sys
 sys.path.append("../../")
-from MMFlow import transform, MMFlow, utils
+from deepbar import transform, NFlow, utils
 sys.path.append("./script/")
 from functions import *
 from sys import exit
@@ -45,7 +45,7 @@ conditioner_net_create_fn = lambda feature_size, context_size, output_size: \
                           hidden_size = data['hidden_size'],
                           num_blocks = data['num_blocks'])
 
-mmflow = MMFlow(data['feature_size'],
+mmflow = NFlow(data['feature_size'],
                 data['context_size'],
                 data['circular_feature_flag'],
                 data['transform_feature_flag'],

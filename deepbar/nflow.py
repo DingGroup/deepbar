@@ -2,9 +2,9 @@ import math
 import torch
 import torch.nn as nn
 import torch.distributions as distributions
-from MMFlow.transform.coupling_transform import MixedRationalQuadraticCouplingTransform
+from deepbar.transform.coupling_transform import MixedRationalQuadraticCouplingTransform
 
-class MMFlow(nn.Module):
+class NFlow(nn.Module):
     def __init__(self,
                  feature_size,
                  context_size,
@@ -13,7 +13,7 @@ class MMFlow(nn.Module):
                  conditioner_net_create_fn,
                  num_bins_circular,
                  num_bins_regular):
-        super(MMFlow, self).__init__()
+        super(NFlow, self).__init__()
 
         self.feature_size = feature_size
         self.context_size = context_size
