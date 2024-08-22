@@ -1,10 +1,12 @@
-import simtk.openmm as omm
-import simtk.openmm.app as app
+import openmm as omm
+import openmm.app as app
 import os
 import argparse
+from sys import exit
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--solvent", type = str, choices = ['OBC2', 'vacuum'], required = True)
+parser.add_argument("--solvent", type=str, choices=["OBC2", "vacuum"], required=True)
 args = parser.parse_args()
 
 name = "methyl_hexanoate"
@@ -13,43 +15,41 @@ name = "methyl_hexanoate"
 prmtop = app.AmberPrmtopFile(f"./structure/{name}.prmtop")
 
 if args.solvent == "OBC2":
-    system = prmtop.createSystem(nonbondedMethod=app.NoCutoff,
-                                 rigidWater=False,
-                                 implicitSolvent=app.OBC2,
-                                 removeCMMotion=True)    
+    system = prmtop.createSystem(
+        nonbondedMethod=app.NoCutoff,
+        rigidWater=False,
+        implicitSolvent=app.OBC2,
+        removeCMMotion=True,
+    )
 elif args.solvent == "vacuum":
-    system = prmtop.createSystem(nonbondedMethod=app.NoCutoff,
-                                 rigidWater=False,
-                                 implicitSolvent=None,
-                                 removeCMMotion=True)    
-    
+    system = prmtop.createSystem(
+        nonbondedMethod=app.NoCutoff,
+        rigidWater=False,
+        implicitSolvent=None,
+        removeCMMotion=True,
+    )
+
 inpcrd = app.AmberInpcrdFile(f"./structure/{name}.inpcrd")
-with open(f"./structure/{name}_{args.solvent}.xml", 'w') as file_handle:
+with open(f"./structure/{name}_{args.solvent}.xml", "w") as file_handle:
     file_handle.write(omm.XmlSerializer.serializeSystem(system))
 
-## contruct the context
-integrator = omm.LangevinIntegrator(300, 1, 0.001)
-platform = omm.Platform.getPlatformByName('Reference')
-context = omm.Context(system, integrator, platform)
-context.setPositions(inpcrd.getPositions())
-omm.LocalEnergyMinimizer_minimize(context, 0.001)
+## contruct the simulation
+integrator = omm.LangevinMiddleIntegrator(300, 1, 0.001)
+platform = omm.Platform.getPlatformByName("Reference")
+simulation = app.Simulation(prmtop.topology, system, integrator, platform)
+simulation.context.setPositions(inpcrd.getPositions())
+
+## minimize the energy
+simulation.minimizeEnergy(tolerance=0.001)
 
 ## run simulations
-os.makedirs(f"./output/{args.solvent}/traj", exist_ok = True)
-dcdfile_handle = open(f"./output/{args.solvent}/traj/traj_md.dcd", 'wb')
-dcdfile = app.DCDFile(dcdfile_handle, prmtop.topology, 1)
+os.makedirs(f"./output/{args.solvent}/traj", exist_ok=True)
 
-num_steps = int(1e7)
-save_freq = int(1e3)
-num_frames = num_steps//save_freq
+simulation.reporters.append(
+    app.DCDReporter(f"./output/{args.solvent}/traj/traj_md.dcd", 1000)
+)
 
-for k in range(num_frames):
-    if (k + 1) % 100 == 0:
-        print("{} output of total {} frames".format(k, num_frames), flush = True)
-        
-    integrator.step(save_freq)
-    state = context.getState(getPositions = True)
-    positions = state.getPositions()
-    dcdfile.writeModel(positions)
+for i in tqdm(range(100)):
+    simulation.step(100_000)
 
-dcdfile_handle.close()
+exit()
